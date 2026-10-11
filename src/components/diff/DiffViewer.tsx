@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.border,
   },
   diffMetaLeft: {
     flexDirection: 'row',
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   },
   diffContent: {
     flex: 1,
-    backgroundColor: '#07080a',
+    backgroundColor: colors.background,
   },
   chunkBlock: {
     marginBottom: 8,
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     justifyContent: 'flex-end',
     borderRightWidth: 1,
-    borderRightColor: colors.borderSubtle,
+    borderRightColor: colors.border,
     marginRight: 8,
   },
   gutterNum: {

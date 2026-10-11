@@ -172,12 +172,12 @@ const styles = StyleSheet.create({
   },
   childrenContainer: {
     borderLeftWidth: 1,
-    borderLeftColor: colors.borderSubtle,
+    borderLeftColor: colors.border,
     marginLeft: 6,
   },
   filePreviewContainer: {
     flex: 1,
-    backgroundColor: '#07080a',
+    backgroundColor: colors.background,
   },
   filePreviewHeader: {
     flexDirection: 'row',
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    borderBottomColor: colors.border,
   },
   previewPathRow: {
     flexDirection: 'row',

@@ -253,16 +253,16 @@ export const Sidebar: React.FC = () => {
 const styles = StyleSheet.create({
   sidebar: {
     width: 280,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.sidebar,
     borderRightWidth: 1,
-    borderRightColor: colors.borderSubtle,
+    borderRightColor: colors.sidebarBorder,
     flexDirection: 'column',
     height: '100%',
   },
   projectSection: {
     padding: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    borderBottomColor: colors.sidebarBorder,
     position: 'relative',
     zIndex: 20,
   },
@@ -270,11 +270,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surfaceHover,
+    backgroundColor: colors.sidebarRowHover,
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.sidebarBorder,
   },
   projectLeft: {
     flexDirection: 'row',
@@ -424,9 +424,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeThreadItem: {
-    backgroundColor: colors.surfaceHover,
+    backgroundColor: colors.sidebarRowActive,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.sidebarBorder,
   },
   threadItemContent: {
     flex: 1,
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   sidebarFooter: {
     padding: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    backgroundColor: colors.surface,
+    borderTopColor: colors.sidebarBorder,
+    backgroundColor: colors.sidebar,
   },
 });

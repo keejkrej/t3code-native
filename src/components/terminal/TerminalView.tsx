@@ -128,7 +128,7 @@ export const TerminalView: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#07080a',
+    backgroundColor: colors.terminalBackground,
     flexDirection: 'column',
   },
   topBar: {
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
   presetsScroll: {
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
+    borderTopColor: colors.border,
     backgroundColor: colors.surface,
     gap: 8,
   },

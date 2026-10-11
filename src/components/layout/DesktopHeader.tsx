@@ -177,9 +177,9 @@ export const DesktopHeader: React.FC = () => {
 const styles = StyleSheet.create({
   header: {
     height: 44,
-    backgroundColor: colors.backgroundSubtle,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    borderBottomColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
