@@ -11,6 +11,7 @@
     "build": "pnpm build:web && pnpm build:electron",
     "typecheck": "tsc --noEmit",
     "desktop": "electron .",
+    "postinstall": "node scripts/ensure-electron.cjs",
     "server:build": "cd server && go build -o bin/t3server ./cmd/t3server",
     "server:run": "cd server && go run ./cmd/t3server",
     "server:test": "cd server && go test -v ./..."
