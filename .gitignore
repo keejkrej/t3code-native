@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Production build outputs
+dist/
+dist-electron/
+out/
+build/
+
+# Logs and runtime caches
+*.log
+.DS_Store
+.env.local
+.cache/
+.t3/
