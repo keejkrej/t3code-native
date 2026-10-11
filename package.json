@@ -10,7 +10,10 @@
     "build:electron": "esbuild electron/main.ts electron/preload.ts --platform=node --target=node20 --outdir=dist-electron --format=cjs --out-extension:.js=.cjs",
     "build": "pnpm build:web && pnpm build:electron",
     "typecheck": "tsc --noEmit",
-    "desktop": "electron ."
+    "desktop": "electron .",
+    "server:build": "cd server && go build -o bin/t3server ./cmd/t3server",
+    "server:run": "cd server && go run ./cmd/t3server",
+    "server:test": "cd server && go test -v ./..."
   },
   "keywords": [
     "t3code",

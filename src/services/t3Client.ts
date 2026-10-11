@@ -1,4 +1,4 @@
-import { Message, Turn, ToolCall } from '../types';
+import { Message, Turn, ToolCall, ContextChip } from '../types';
 
 export type T3ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'demo';
 
@@ -15,7 +15,7 @@ class T3ClientService {
   private shouldAutoReconnect: boolean = true;
 
   constructor() {
-    // Default to connecting
+    // Default URL can be overridden
   }
 
   public connect(url: string = this.url) {
@@ -28,7 +28,7 @@ class T3ClientService {
 
       this.ws.onopen = () => {
         this.setStatus('connected');
-        // Handshake
+        // Handshake with Go server
         this.send({
           type: 'client_hello',
           client: 't3code-native-desktop',
@@ -80,7 +80,7 @@ class T3ClientService {
       if (this.shouldAutoReconnect && this.status === 'disconnected') {
         this.connect(this.url);
       }
-    }, 4000);
+    }, 3000);
   }
 
   public send(payload: any): boolean {
@@ -89,6 +89,10 @@ class T3ClientService {
       return true;
     }
     return false;
+  }
+
+  public isConnected(): boolean {
+    return this.status === 'connected' && this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
 
   public onMessage(handler: MessageHandler) {
@@ -119,8 +123,71 @@ class T3ClientService {
     return this.status;
   }
 
+  // --- Real-time Go Server RPC Actions ---
+
+  public sendTurnStart(
+    threadId: string,
+    prompt: string,
+    contextChips?: ContextChip[],
+    provider?: string,
+    model?: string
+  ): boolean {
+    return this.send({
+      type: 'turn.start',
+      payload: {
+        threadId,
+        content: prompt,
+        contextChips: contextChips || [],
+        provider: provider || 'antigravity',
+        model: model || 'gemini-3.8-flash-high',
+      },
+    });
+  }
+
+  public sendTerminalExec(command: string): boolean {
+    return this.send({
+      type: 'terminal.exec',
+      payload: { command },
+    });
+  }
+
+  public sendStageDiff(path: string): boolean {
+    return this.send({
+      type: 'diffs.stage',
+      payload: { path },
+    });
+  }
+
+  public sendRevertDiff(path: string): boolean {
+    return this.send({
+      type: 'diffs.revert',
+      payload: { path },
+    });
+  }
+
+  public sendRefreshDiffs(): boolean {
+    return this.send({
+      type: 'diffs.get',
+      payload: {},
+    });
+  }
+
+  public sendCreateThread(projectId: string, title: string, provider: string, model: string): boolean {
+    return this.send({
+      type: 'thread.create',
+      payload: { projectId, title, provider, model },
+    });
+  }
+
+  public sendDeleteThread(threadId: string): boolean {
+    return this.send({
+      type: 'thread.delete',
+      payload: { threadId },
+    });
+  }
+
   /**
-   * Simulated Agent Turn for interactive standalone desktop testing
+   * Simulated Agent Turn fallback when running offline without the Go server
    */
   public simulateTurn(
     threadId: string,
@@ -142,7 +209,7 @@ class T3ClientService {
         id: turnId,
         threadId,
         status: 'thinking',
-        thoughts: `Analyzing prompt: "${prompt}"\nInvestigating project context and available tools...`,
+        thoughts: `Analyzing prompt: "${prompt}"\nInvestigating workspace context and available tools...`,
         toolCalls: [],
         timestamp,
       },
@@ -153,7 +220,7 @@ class T3ClientService {
       const toolCall1: ToolCall = {
         id: `tool-${Date.now()}-1`,
         name: 'run_command',
-        summary: `Execute checks for ${provider}`,
+        summary: `Execute workspace checks for ${provider}`,
         parameters: { CommandLine: 'git status --short' },
         status: 'running',
         timestamp,
@@ -163,7 +230,7 @@ class T3ClientService {
         turn: {
           id: turnId,
           status: 'running',
-          thoughts: `Analyzing prompt: "${prompt}"\nInvestigating project context and available tools...\nChecking repository status and staged diffs.`,
+          thoughts: `Analyzing prompt: "${prompt}"\nInvestigating workspace context and available tools...\nChecking repository status and staged diffs.`,
         },
         toolCall: toolCall1,
       });
@@ -171,7 +238,7 @@ class T3ClientService {
       // Complete tool 1
       setTimeout(() => {
         toolCall1.status = 'success';
-        toolCall1.result = 'M src/App.tsx\nA electron/main.ts\nM package.json';
+        toolCall1.result = 'M src/App.tsx\nA server/cmd/t3server/main.go\nM package.json';
         toolCall1.durationMs = 85;
 
         onProgress({
@@ -183,8 +250,8 @@ class T3ClientService {
           const toolCall2: ToolCall = {
             id: `tool-${Date.now()}-2`,
             name: 'client_create_file',
-            summary: 'Update desktop component tree',
-            parameters: { target_file: 'src/components/chat/ChatView.tsx' },
+            summary: 'Synchronize Go backend with React Native desktop',
+            parameters: { target_file: 'src/services/t3Client.ts' },
             status: 'running',
             timestamp,
           };
@@ -193,7 +260,7 @@ class T3ClientService {
 
           setTimeout(() => {
             toolCall2.status = 'success';
-            toolCall2.result = 'Wrote 184 lines to src/components/chat/ChatView.tsx';
+            toolCall2.result = 'Wrote 240 lines to src/services/t3Client.ts';
             toolCall2.durationMs = 120;
             onProgress({ toolCall: toolCall2 });
 
@@ -203,10 +270,7 @@ class T3ClientService {
                 id: `msg-${Date.now()}`,
                 threadId,
                 role: 'assistant',
-                content: `I've processed your request: **"${prompt}"**.\n\nAll tools executed cleanly:
-- Ran \`git status --short\` to verify branch cleanliness.
-- Created and synchronized native desktop components.
-- State is synced and ready in your workspace!`,
+                content: `I've processed your request: **"${prompt}"**.\n\nAll tools executed cleanly:\n- Ran \`git status --short\` to verify branch cleanliness.\n- Synchronized Go backend daemon with React Native desktop client.\n- State is synced and ready in your workspace!`,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 turnId,
               };
@@ -226,11 +290,11 @@ class T3ClientService {
                 },
                 completedMessage,
               });
-            }, 600);
-          }, 700);
-        }, 500);
-      }, 700);
-    }, 800);
+            }, 500);
+          }, 600);
+        }, 400);
+      }, 500);
+    }, 600);
   }
 }
 

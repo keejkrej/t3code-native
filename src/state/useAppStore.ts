@@ -67,6 +67,7 @@ export interface AppState {
   connectionStatus: T3ConnectionStatus;
 
   // Actions
+  initClient: () => void;
   setActiveProject: (projectId: string) => void;
   setActiveThread: (threadId: string) => void;
   createThread: (title: string, provider: ProviderId, model: string) => string;
@@ -106,9 +107,9 @@ export interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   projects: initialProjects,
-  activeProjectId: initialProjects[0].id,
+  activeProjectId: initialProjects[0]?.id || 'proj-default',
   threads: initialThreads,
-  activeThreadId: initialThreads[0].id,
+  activeThreadId: initialThreads[0]?.id || 'thread-default',
 
   messages: initialMessages,
   turns: initialTurns,
@@ -124,9 +125,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   terminalLines: [
     { id: 'term-1', type: 'system', text: 'T3 Code Native Desktop Terminal v1.0.0', timestamp: Date.now() - 60000 },
-    { id: 'term-2', type: 'system', text: 'Connected to local agent harness environment (/home/jack/workspace/t3code-native)', timestamp: Date.now() - 59000 },
-    { id: 'term-3', type: 'input', text: 'git status', timestamp: Date.now() - 58000 },
-    { id: 'term-4', type: 'output', text: 'On branch main\nChanges not staged for commit:\n  modified:   src/App.tsx\n  modified:   package.json\nUntracked files:\n  electron/main.ts', timestamp: Date.now() - 57000 },
+    { id: 'term-2', type: 'system', text: 'Connecting to Go backend daemon (ws://localhost:3773/ws)...', timestamp: Date.now() - 59000 },
   ],
 
   providers: initialProviders,
@@ -151,7 +150,125 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   environments: initialEnvironments,
   currentEnvironmentId: 'env-local',
-  connectionStatus: 'connected',
+  connectionStatus: 'connecting',
+
+  initClient: () => {
+    t3Client.onStatus((status) => {
+      set({ connectionStatus: status });
+    });
+
+    t3Client.onMessage((msg) => {
+      const state = get();
+      if (msg.type === 'server_hello') {
+        const projects = msg.projects && msg.projects.length > 0 ? msg.projects : state.projects;
+        const activeProjId = msg.activeProject?.id || projects[0]?.id || state.activeProjectId;
+        const threads = msg.threads && msg.threads.length > 0 ? msg.threads : state.threads;
+        const activeThId = msg.activeThread?.id || threads[0]?.id || state.activeThreadId;
+
+        set({
+          connectionStatus: 'connected',
+          projects,
+          activeProjectId: activeProjId,
+          threads,
+          activeThreadId: activeThId,
+          messages: msg.messages ? { ...state.messages, ...msg.messages } : state.messages,
+          turns: msg.turns ? { ...state.turns, ...msg.turns } : state.turns,
+          providers: msg.providers || state.providers,
+          fileDiffs: msg.diffs || state.fileDiffs,
+          terminalLines: msg.terminalLines && msg.terminalLines.length > 0 ? msg.terminalLines : state.terminalLines,
+          workspaceFiles: msg.workspaceFiles || state.workspaceFiles,
+        });
+      } else if (msg.type === 'message.created') {
+        const threadId = msg.threadId;
+        const currentMsgs = state.messages[threadId] || [];
+        set({
+          messages: {
+            ...state.messages,
+            [threadId]: [...currentMsgs.filter((m) => m.id !== msg.message.id), msg.message],
+          },
+        });
+      } else if (msg.type === 'turn.started') {
+        const threadId = msg.threadId;
+        const currentTurns = state.turns[threadId] || [];
+        set({
+          isGenerating: true,
+          turns: {
+            ...state.turns,
+            [threadId]: [...currentTurns.filter((t) => t.id !== msg.turn.id), msg.turn],
+          },
+        });
+      } else if (msg.type === 'turn.thinking') {
+        const threadId = msg.threadId;
+        const currentTurns = state.turns[threadId] || [];
+        const lastTurn = currentTurns[currentTurns.length - 1];
+        if (lastTurn) {
+          lastTurn.thoughts = msg.thoughts;
+          set({
+            turns: { ...state.turns, [threadId]: [...currentTurns] },
+          });
+        }
+      } else if (msg.type === 'turn.tool_call') {
+        const threadId = msg.threadId;
+        const currentTurns = state.turns[threadId] || [];
+        const lastTurn = currentTurns[currentTurns.length - 1];
+        if (lastTurn) {
+          const tc = msg.toolCall;
+          const idx = lastTurn.toolCalls.findIndex((t) => t.id === tc.id);
+          if (idx >= 0) {
+            lastTurn.toolCalls[idx] = tc;
+          } else {
+            lastTurn.toolCalls.push(tc);
+          }
+          set({
+            turns: { ...state.turns, [threadId]: [...currentTurns] },
+          });
+        }
+      } else if (msg.type === 'turn.completed') {
+        const threadId = msg.threadId;
+        const currentTurns = state.turns[threadId] || [];
+        const updatedTurns = currentTurns.map((t) => (t.id === msg.turn?.id ? msg.turn : t));
+        const currentMsgs = state.messages[threadId] || [];
+        const newMsgs = msg.completedMessage
+          ? [...currentMsgs.filter((m) => m.id !== msg.completedMessage.id), msg.completedMessage]
+          : currentMsgs;
+
+        set({
+          isGenerating: false,
+          turns: { ...state.turns, [threadId]: updatedTurns },
+          messages: { ...state.messages, [threadId]: newMsgs },
+        });
+
+        t3Client.sendRefreshDiffs();
+      } else if (msg.type === 'turn.failed') {
+        set({ isGenerating: false });
+      } else if (msg.type === 'terminal.output') {
+        if (msg.line) {
+          set({
+            terminalLines: [...state.terminalLines, msg.line],
+          });
+        }
+      } else if (msg.type === 'diffs.updated' || msg.type === 'diffs.result') {
+        if (msg.diffs) {
+          set({ fileDiffs: msg.diffs });
+        }
+      } else if (msg.type === 'thread.created') {
+        if (msg.thread) {
+          set({
+            threads: [msg.thread, ...state.threads],
+            activeThreadId: msg.thread.id,
+          });
+        }
+      } else if (msg.type === 'thread.deleted') {
+        const updated = state.threads.filter((t) => t.id !== msg.threadId);
+        set({
+          threads: updated,
+          activeThreadId: state.activeThreadId === msg.threadId ? updated[0]?.id || '' : state.activeThreadId,
+        });
+      }
+    });
+
+    t3Client.connect(get().settings.serverUrl);
+  },
 
   setActiveProject: (projectId: string) => {
     const projectThreads = get().threads.filter((t) => t.projectId === projectId);
@@ -187,6 +304,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       isNewThreadModalOpen: false,
     });
 
+    if (t3Client.isConnected()) {
+      t3Client.sendCreateThread(activeProjectId, title, provider, model);
+    }
+
     return newThreadId;
   },
 
@@ -197,10 +318,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       threads: updatedThreads,
       activeThreadId: activeThreadId === threadId ? updatedThreads[0]?.id || '' : activeThreadId,
     });
+
+    if (t3Client.isConnected()) {
+      t3Client.sendDeleteThread(threadId);
+    }
   },
 
   sendMessage: (content: string, contextChips?: ContextChip[]) => {
-    const { activeThreadId, messages, turns, selectedProvider, selectedModel } = get();
+    const { activeThreadId, messages, selectedProvider, selectedModel } = get();
     if (!content.trim() || !activeThreadId) return;
 
     const userMsgId = `msg-${Date.now()}`;
@@ -223,7 +348,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       isGenerating: true,
     });
 
-    // Run simulated or live agent turn
+    // Check if connected to Go backend
+    if (t3Client.isConnected()) {
+      t3Client.sendTurnStart(activeThreadId, content, contextChips, selectedProvider, selectedModel);
+      return;
+    }
+
+    // Fallback: Run simulated agent turn
     t3Client.simulateTurn(
       activeThreadId,
       content,
@@ -287,7 +418,6 @@ export const useAppStore = create<AppState>((set, get) => ({
           isGenerating: !isFinished,
         });
 
-        // Also add tool activity to terminal if command was run
         if (toolCall && toolCall.name === 'run_command' && toolCall.status === 'success') {
           get().executeTerminalCommand(toolCall.parameters.CommandLine);
         }
@@ -321,6 +451,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         diff.path === path ? { ...diff, isStaged: !diff.isStaged } : diff
       ),
     }));
+
+    if (t3Client.isConnected()) {
+      t3Client.sendStageDiff(path);
+    }
   },
 
   revertDiff: (path) => {
@@ -328,10 +462,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       fileDiffs: state.fileDiffs.filter((diff) => diff.path !== path),
       selectedDiffFile: state.fileDiffs.find((d) => d.path !== path)?.path ?? null,
     }));
+
+    if (t3Client.isConnected()) {
+      t3Client.sendRevertDiff(path);
+    }
   },
 
   selectWorkspaceFile: (path) => {
-    // Generate simulated file preview content
     const sampleContent = `// File: ${path}\n// T3 Code Native Desktop preview\n\nexport const info = {\n  path: "${path}",\n  loadedAt: new Date().toISOString(),\n  ready: true,\n};\n`;
     set({
       selectedFileContent: { path, content: sampleContent },
@@ -353,9 +490,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       timestamp: Date.now(),
     };
 
+    if (t3Client.isConnected()) {
+      set((state) => ({
+        terminalLines: [...state.terminalLines, inputLine],
+      }));
+      t3Client.sendTerminalExec(command);
+      return;
+    }
+
+    // Local simulation fallback
     let outputText = '';
     if (command.startsWith('git status')) {
-      outputText = 'On branch main\nYour branch is up to date with \'origin/main\'.\n\nChanges to be committed:\n  modified:   src/App.tsx\n\nUntracked files:\n  electron/main.ts';
+      outputText = 'On branch main\nYour branch is up to date with \'origin/main\'.\n\nChanges to be committed:\n  modified:   src/App.tsx\n\nUntracked files:\n  server/';
     } else if (command.startsWith('pnpm test')) {
       outputText = '✓ 42 tests passed (42 passed, 0 failed)\nTest Suites: 8 passed, 8 total\nSnapshots:   0 total\nTime:        1.24s';
     } else if (command.startsWith('pnpm build')) {
