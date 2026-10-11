@@ -41,6 +41,8 @@ export interface AppState {
   activeInspectorTab: 'diffs' | 'terminal' | 'files' | 'review';
   isSidebarOpen: boolean;
   isInspectorOpen: boolean;
+  isTerminalDrawerOpen: boolean;
+  rightPanelMode: 'workspace' | 'diffs' | 'closed';
   fileDiffs: FileDiff[];
   selectedDiffFile: string | null;
   workspaceFiles: WorkspaceFile[];
@@ -62,6 +64,10 @@ export interface AppState {
 
   // Settings & Connection
   settings: AppSettings;
+  settingsTab: 'general' | 'appearance' | 'providers' | 'projects' | 'keybindings' | 'connections' | 'storage';
+  selectedSettingsProviderId: string;
+  modelFavorites: string[];
+  hiddenModels: string[];
   environments: ServerEnvironment[];
   currentEnvironmentId: string;
   connectionStatus: T3ConnectionStatus;
@@ -77,6 +83,9 @@ export interface AppState {
 
   toggleSidebar: () => void;
   toggleInspector: () => void;
+  toggleTerminalDrawer: () => void;
+  setRightPanelMode: (mode: 'workspace' | 'diffs' | 'closed') => void;
+  toggleRightPanel: () => void;
   setInspectorTab: (tab: 'diffs' | 'terminal' | 'files' | 'review') => void;
   setSelectedDiffFile: (path: string | null) => void;
   toggleStageDiff: (path: string) => void;
@@ -93,12 +102,24 @@ export interface AppState {
 
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
-  openSettings: () => void;
+  openSettings: (tab?: 'general' | 'appearance' | 'providers' | 'projects' | 'keybindings' | 'connections' | 'storage') => void;
   closeSettings: () => void;
+  setSettingsTab: (tab: 'general' | 'appearance' | 'providers' | 'projects' | 'keybindings' | 'connections' | 'storage') => void;
+  setSelectedSettingsProviderId: (id: string) => void;
   openNewThreadModal: () => void;
   closeNewThreadModal: () => void;
   openModelPicker: () => void;
   closeModelPicker: () => void;
+  toggleModelPicker: () => void;
+
+  toggleModelFavorite: (providerId: string, modelId: string) => void;
+  toggleModelVisibility: (providerId: string, modelId: string) => void;
+  updateProvider: (providerId: string, updates: Partial<ProviderInfo>) => void;
+  addCustomModel: (providerId: string, model: any) => void;
+  deleteCustomModel: (providerId: string, modelId: string) => void;
+  addProviderInstance: (provider: ProviderInfo) => void;
+  deleteProviderInstance: (providerId: string) => void;
+  resetProviderToDefault: (providerId: string) => void;
 
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   connectToServer: (url?: string) => void;
@@ -118,6 +139,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeInspectorTab: 'diffs',
   isSidebarOpen: true,
   isInspectorOpen: true,
+  isTerminalDrawerOpen: false,
+  rightPanelMode: 'workspace',
   fileDiffs: initialFileDiffs,
   selectedDiffFile: initialFileDiffs[0]?.path ?? null,
   workspaceFiles: initialWorkspaceFiles,
@@ -137,10 +160,34 @@ export const useAppStore = create<AppState>((set, get) => ({
   isNewThreadModalOpen: false,
   isModelPickerOpen: false,
 
+  settingsTab: 'providers',
+  selectedSettingsProviderId: 'antigravity',
+  modelFavorites: [
+    'antigravity:gemini-3.8-flash-high',
+    'claude:claude-3-7-sonnet-thinking',
+    'codex:o3-mini',
+  ],
+  hiddenModels: [
+    'antigravity:gemini-1.5-pro-legacy',
+    'claude:claude-3-opus-legacy',
+    'codex:gpt-4-turbo-legacy',
+  ],
+
   settings: {
     theme: 'dark',
+    contrast: 50,
+    glassOpacity: 75,
     fontFamily: 'default',
     fontSize: 13,
+    codeFontFamily: 'JetBrains Mono',
+    codeFontSize: 13,
+    interfaceFontSize: 13,
+    terminalFontSize: 12,
+    responseStreamingMode: 'streamed',
+    autoSettleAfterDays: 7,
+    confirmThreadArchive: true,
+    confirmThreadDelete: true,
+    confirmQuit: false,
     serverUrl: 'ws://localhost:3773/ws',
     authToken: '',
     autoConnect: true,
@@ -437,8 +484,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({ isInspectorOpen: !state.isInspectorOpen }));
   },
 
+  toggleTerminalDrawer: () => {
+    set((state) => ({ isTerminalDrawerOpen: !state.isTerminalDrawerOpen }));
+  },
+
+  setRightPanelMode: (mode) => {
+    set({ rightPanelMode: mode, isInspectorOpen: mode !== 'closed' });
+  },
+
+  toggleRightPanel: () => {
+    set((state) => {
+      const nextOpen = !state.isInspectorOpen;
+      return {
+        isInspectorOpen: nextOpen,
+        rightPanelMode: nextOpen ? (state.rightPanelMode === 'closed' ? 'workspace' : state.rightPanelMode) : 'closed',
+      };
+    });
+  },
+
   setInspectorTab: (tab) => {
-    set({ activeInspectorTab: tab, isInspectorOpen: true });
+    set({ activeInspectorTab: tab, isInspectorOpen: true, rightPanelMode: tab === 'diffs' ? 'diffs' : 'workspace' });
   },
 
   setSelectedDiffFile: (path) => {
@@ -539,14 +604,101 @@ export const useAppStore = create<AppState>((set, get) => ({
   openCommandPalette: () => set({ isCommandPaletteOpen: true }),
   closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
 
-  openSettings: () => set({ isSettingsOpen: true }),
+  openSettings: (tab) =>
+    set({
+      isSettingsOpen: true,
+      ...(typeof tab === 'string' ? { settingsTab: tab } : {}),
+    }),
   closeSettings: () => set({ isSettingsOpen: false }),
+  setSettingsTab: (tab) => set({ settingsTab: typeof tab === 'string' ? tab : 'providers' }),
+  setSelectedSettingsProviderId: (id) => set({ selectedSettingsProviderId: id }),
 
   openNewThreadModal: () => set({ isNewThreadModalOpen: true }),
   closeNewThreadModal: () => set({ isNewThreadModalOpen: false }),
 
   openModelPicker: () => set({ isModelPickerOpen: true }),
   closeModelPicker: () => set({ isModelPickerOpen: false }),
+  toggleModelPicker: () => set((state) => ({ isModelPickerOpen: !state.isModelPickerOpen })),
+
+  toggleModelFavorite: (providerId, modelId) => {
+    const key = `${providerId}:${modelId}`;
+    set((state) => {
+      const exists = state.modelFavorites.includes(key);
+      return {
+        modelFavorites: exists
+          ? state.modelFavorites.filter((f) => f !== key)
+          : [...state.modelFavorites, key],
+      };
+    });
+  },
+
+  toggleModelVisibility: (providerId, modelId) => {
+    const key = `${providerId}:${modelId}`;
+    set((state) => {
+      const isHidden = state.hiddenModels.includes(key);
+      return {
+        hiddenModels: isHidden
+          ? state.hiddenModels.filter((h) => h !== key)
+          : [...state.hiddenModels, key],
+      };
+    });
+  },
+
+  updateProvider: (providerId, updates) => {
+    set((state) => ({
+      providers: state.providers.map((p) => (p.id === providerId ? { ...p, ...updates } : p)),
+    }));
+  },
+
+  addCustomModel: (providerId, model) => {
+    set((state) => ({
+      providers: state.providers.map((p) => {
+        if (p.id !== providerId) return p;
+        return {
+          ...p,
+          models: [...p.models, { ...model, isCustom: true }],
+        };
+      }),
+    }));
+  },
+
+  deleteCustomModel: (providerId, modelId) => {
+    set((state) => ({
+      providers: state.providers.map((p) => {
+        if (p.id !== providerId) return p;
+        return {
+          ...p,
+          models: p.models.filter((m) => m.id !== modelId),
+        };
+      }),
+    }));
+  },
+
+  addProviderInstance: (newProvider) => {
+    set((state) => ({
+      providers: [...state.providers, newProvider],
+      selectedSettingsProviderId: newProvider.id,
+    }));
+  },
+
+  deleteProviderInstance: (providerId) => {
+    set((state) => {
+      const nextProviders = state.providers.filter((p) => p.id !== providerId);
+      return {
+        providers: nextProviders,
+        selectedSettingsProviderId: nextProviders[0]?.id || '',
+      };
+    });
+  },
+
+  resetProviderToDefault: (providerId) => {
+    const original = initialProviders.find((p) => p.id === providerId);
+    if (original) {
+      set((state) => ({
+        providers: state.providers.map((p) => (p.id === providerId ? { ...original } : p)),
+      }));
+    }
+  },
 
   updateSettings: (newSettings) => {
     set((state) => ({

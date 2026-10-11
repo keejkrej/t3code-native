@@ -228,8 +228,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.base,
     fontFamily: typography.fontFamily,
     padding: 0,
-    // @ts-ignore
-    outlineWidth: 0,
   },
   escPill: {
     backgroundColor: colors.surfaceHover,

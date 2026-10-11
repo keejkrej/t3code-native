@@ -219,7 +219,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: typography.monoFontFamily,
     padding: 0,
-    // @ts-ignore
-    outlineWidth: 0,
   },
 });

@@ -542,8 +542,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.sizes.xs,
     fontFamily: typography.monoFontFamily,
-    // @ts-ignore
-    outlineWidth: 0,
   },
   shortcutRow: {
     flexDirection: 'row',

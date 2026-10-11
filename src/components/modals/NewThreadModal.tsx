@@ -248,8 +248,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.sizes.sm,
     fontFamily: typography.fontFamily,
-    // @ts-ignore
-    outlineWidth: 0,
   },
   providerGrid: {
     flexDirection: 'row',

@@ -27,10 +27,10 @@ declare module 'react-native' {
   };
   export const AppRegistry: {
     registerComponent: (name: string, component: () => React.ComponentType<any>) => void;
-    runApplication: (name: string, config: { rootTag: HTMLElement | null }) => void;
+    runApplication: (name: string, config: { initialProps?: any; rootTag: HTMLElement | number | null }) => any;
   };
   export const Platform: {
-    OS: 'web' | 'ios' | 'android' | 'windows' | 'macos';
+    OS: 'web' | 'ios' | 'android' | 'windows' | 'macos' | 'linux';
     select: <T>(obj: Record<string, T>) => T;
   };
 }

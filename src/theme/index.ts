@@ -6,15 +6,16 @@
 export const colors = {
   // Official T3 Code Canvas & Chrome
   background: '#0a0a0a',
-  backgroundSubtle: '#0f0f0f',
+  backgroundSubtle: '#000000',
   
   // Surfaces
   surface: '#111111',
   surfaceHover: '#141414',
-  surfaceActive: '#1a1a1a',
-  surfaceSelected: '#1e1e1e',
+  surfaceActive: '#1a1b1b',
+  surfaceSelected: '#16171b',
+  surfaceRaised: '#111111',
 
-  // Sidebar (pure dark black in official T3 Code desktop)
+  // Sidebar (pure black #000000 in official T3 Code desktop)
   sidebar: '#000000',
   sidebarForeground: '#f1f3f7',
   sidebarMutedForeground: '#a3a3a3',
@@ -30,13 +31,13 @@ export const colors = {
   borderHighlight: '#262626',
   inputBorder: '#1e1e1e',
 
-  // Brand & Accents
-  primary: '#ec4899', // T3 Signature Magenta / Pink
-  primaryLight: '#f472b6',
-  primaryDark: '#db2777',
-  primaryMuted: 'rgba(236, 72, 153, 0.15)',
+  // Brand & Action Accent (Official T3 Code Cobalt Blue #346bf1)
+  primary: '#346bf1',
+  primaryLight: '#51a2ff',
+  primaryDark: '#3061d9',
+  primaryMuted: 'rgba(52, 107, 241, 0.15)',
 
-  // T3 Action Accent (Cobalt Blue in official T3 Code dark)
+  // T3 Action Accent
   accentCobalt: '#346bf1',
   accentCobaltHover: '#3061d9',
 
@@ -48,6 +49,12 @@ export const colors = {
   accentAmber: '#fe9a00',
   accentRose: '#fb414a',
 
+  // Blueprint Stage Art Tokens
+  stageArtBottom: '#070b19',
+  stageArtMid: '#0d1836',
+  stageArtTop: '#162b5a',
+  stageArtHighlight: '#346bf1',
+
   // Provider Colors
   claude: '#d97706',
   codex: '#10a37f',
@@ -58,40 +65,45 @@ export const colors = {
 
   // Typography Colors
   text: '#f5f5f5',
-  textSecondary: '#a3a3a3',
+  textSecondary: '#a1a1aa',
   textMuted: '#818181',
-  textFaint: '#525252',
-  textInverse: '#0a0a0a',
+  textFaint: '#52525b',
+  textInverse: '#000000',
 
   // Status & Diff (Matches T3 Code Diffs)
-  diffAddBg: 'rgba(16, 185, 129, 0.12)',
+  diffAddBg: 'rgba(34, 197, 94, 0.12)',
   diffAddText: '#4ade80',
-  diffAddGutter: '#16a34a',
-  diffDeleteBg: 'rgba(251, 65, 74, 0.12)',
+  diffAddGutter: '#22c55e',
+  diffDeleteBg: 'rgba(239, 68, 68, 0.12)',
   diffDeleteText: '#f87171',
-  diffDeleteGutter: '#dc2626',
+  diffDeleteGutter: '#ef4444',
   statusClean: '#10b981',
   statusDirty: '#fe9a00',
   statusError: '#fb414a',
   statusRunning: '#346bf1',
+
+  // Messages
+  messageSurface: '#141414',
+  messageForeground: '#f5f5f5',
+  messageAction: '#346bf1',
+  messageActionForeground: '#ffffff',
+  messageActionHover: '#3061d9',
 
   // Terminal (Official T3 Code Terminal tokens)
   terminalBackground: '#0a0a0a',
   terminalForeground: '#f5f5f5',
   terminalCursor: '#b4cbff',
   terminalSelection: '#343a47',
-  terminalScrollbar: '#222222',
+  terminalScrollbar: '#191919',
 
   // Overlays
-  overlay: 'rgba(0, 0, 0, 0.75)',
-  cardGlass: 'rgba(17, 17, 17, 0.9)',
+  overlay: 'rgba(0, 0, 0, 0.8)',
+  cardGlass: 'rgba(17, 17, 17, 0.95)',
 };
 
 export const typography = {
-  fontFamily:
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'DM Sans', Roboto, sans-serif",
-  monoFontFamily:
-    "'SF Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', 'JetBrains Mono', monospace",
+  fontFamily: 'sans-serif',
+  monoFontFamily: 'Liberation Mono',
   sizes: {
     xs: 11,
     sm: 12,

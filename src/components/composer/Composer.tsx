@@ -9,19 +9,26 @@ import {
 import { colors, typography, borderRadius, spacing } from '../../theme';
 import { useAppStore } from '../../state/useAppStore';
 import { Icon } from '../ui/Icon';
-import { Button } from '../ui/Button';
+import { ProviderLogo } from '../ui/ProviderLogo';
 import { ContextChip } from '../../types';
+import { ModelPickerPopover } from './ModelPickerPopover';
 
 export const Composer: React.FC = () => {
   const {
     activeThreadId,
+    messages,
     sendMessage,
     isGenerating,
     cancelGeneration,
     selectedProvider,
     selectedModel,
+    isModelPickerOpen,
     openModelPicker,
+    closeModelPicker,
+    toggleModelPicker,
     providers,
+    projects,
+    activeProjectId,
   } = useAppStore();
 
   const [input, setInput] = useState('');
@@ -29,6 +36,10 @@ export const Composer: React.FC = () => {
 
   const activeProvider = providers.find((p) => p.id === selectedProvider);
   const activeModelObj = activeProvider?.models.find((m) => m.id === selectedModel);
+  const activeProject = projects.find((p) => p.id === activeProjectId);
+
+  const threadMessages = activeThreadId ? messages[activeThreadId] || [] : [];
+  const isDraftHero = threadMessages.length === 0;
 
   const handleSend = () => {
     if (!input.trim() || isGenerating) return;
@@ -38,26 +49,35 @@ export const Composer: React.FC = () => {
   };
 
   const handleKeyDown = (e: any) => {
-    // If running on web / RN Web
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+    const key = e?.nativeEvent?.key || e?.key;
+    const shift = e?.shiftKey || e?.nativeEvent?.shiftKey;
+    if (key === 'Enter' && !shift) {
+      if (typeof e?.preventDefault === 'function') e.preventDefault();
       handleSend();
     }
-  };
-
-  const addChip = (type: ContextChip['type'], label: string, value: string) => {
-    if (contextChips.some((c) => c.label === label)) return;
-    setContextChips([...contextChips, { id: `chip-${Date.now()}`, type, label, value }]);
   };
 
   const removeChip = (id: string) => {
     setContextChips(contextChips.filter((c) => c.id !== id));
   };
 
+  const canSubmit = input.trim().length > 0 && !isGenerating;
+
   return (
-    <View style={styles.container}>
+    <View style={styles.floatingWrapper}>
+      {/* Anchored Model Picker Popover */}
+      {isModelPickerOpen && (
+        <>
+          <Pressable style={styles.popoverBackdrop} onPress={closeModelPicker} />
+          <View style={styles.popoverAnchor}>
+            <ModelPickerPopover onClose={closeModelPicker} />
+          </View>
+        </>
+      )}
+
+      {/* 1. Main Composer Elevated Card */}
       <View style={styles.composerCard}>
-        {/* Context chips bar */}
+        {/* Context chips bar if any are active */}
         {contextChips.length > 0 && (
           <View style={styles.chipsBar}>
             {contextChips.map((chip) => (
@@ -82,94 +102,139 @@ export const Composer: React.FC = () => {
           placeholder={
             isGenerating
               ? 'Agent is thinking and executing...'
-              : 'Direct your coding agent... (Enter to send, Shift+Enter for newline)'
+              : 'Ask for changes, send follow-ups, or attach images'
           }
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor="#71717a"
           value={input}
           onChangeText={setInput}
-          // @ts-ignore: web keyboard event
-          onKeyDown={handleKeyDown}
+          onKeyPress={handleKeyDown}
+          onSubmitEditing={handleSend}
           editable={!isGenerating}
           style={styles.textInput}
         />
 
-        {/* Bottom Bar: Model Selector, Context Shortcuts, Action Buttons */}
+        {/* Bottom Controls Bar */}
         <View style={styles.bottomBar}>
           <View style={styles.bottomLeft}>
-            {/* Model & Provider Trigger */}
-            <Pressable style={styles.modelPill} onPress={openModelPicker}>
-              <View
-                style={[
-                  styles.providerDot,
-                  { backgroundColor: activeProvider?.iconColor || colors.primary },
-                ]}
-              />
+            {/* Model Selector Pill */}
+            <Pressable
+              style={({ pressed }: any) => [
+                styles.modelPill,
+                pressed && styles.pillHover,
+                isModelPickerOpen && styles.modelPillActive,
+              ]}
+              onPress={toggleModelPicker}
+              title="Switch AI model (Ctrl+Shift+M)"
+            >
+              <View style={styles.modelProvBadge}>
+                <ProviderLogo
+                  provider={(activeProvider as any)?.driverKind || selectedProvider}
+                  size={14}
+                />
+              </View>
               <Text style={styles.modelNameText}>
                 {activeModelObj?.name || selectedModel}
               </Text>
-              <Icon name="ChevronDown" size={12} color={colors.textMuted} />
+              <Icon
+                name="ChevronDown"
+                size={11}
+                color={isModelPickerOpen ? colors.primary : '#71717a'}
+              />
             </Pressable>
 
-            {/* Quick Context Adders */}
-            <Pressable
-              style={styles.quickAddBtn}
-              onPress={() => addChip('file', 'src/App.tsx', 'src/App.tsx')}
-            >
-              <Text style={styles.quickAddText}>+ @App.tsx</Text>
-            </Pressable>
+            <View style={styles.verticalDivider} />
 
+            {/* Permissions Selector Pill */}
             <Pressable
-              style={styles.quickAddBtn}
-              onPress={() => addChip('git', 'git:diff', 'HEAD')}
+              style={({ pressed }: any) => [styles.permissionsPill, pressed && styles.pillHover]}
             >
-              <Text style={styles.quickAddText}>+ @diff</Text>
+              <Icon name="Lock" size={11} color="#71717a" />
+              <Text style={styles.permissionsText}>Full access</Text>
+              <Icon name="ChevronDown" size={11} color="#71717a" />
             </Pressable>
           </View>
 
           <View style={styles.bottomRight}>
+            {/* Paperclip attachment button */}
+            <Pressable
+              style={({ pressed }: any) => [styles.attachBtn, pressed && styles.attachBtnHover]}
+              title="Attach files"
+            >
+              <Icon name="Paperclip" size={15} color="#71717a" />
+            </Pressable>
+
+            {/* Circular Blue Send Button */}
             {isGenerating ? (
-              <Button
-                label="Stop"
-                icon="Square"
-                variant="danger"
-                size="sm"
-                onPress={cancelGeneration}
-              />
+              <Pressable style={styles.stopButton} onPress={cancelGeneration} title="Stop agent">
+                <Icon name="Square" size={12} color="#ffffff" />
+              </Pressable>
             ) : (
-              <Button
-                icon="Send"
-                variant="primary"
-                size="sm"
-                disabled={!input.trim()}
+              <Pressable
+                style={[
+                  styles.sendButton,
+                  !canSubmit && styles.sendButtonDisabled,
+                ]}
+                disabled={!canSubmit}
                 onPress={handleSend}
-                label="Send"
-              />
+                title="Submit message"
+              >
+                <Icon
+                  name="ArrowUp"
+                  size={15}
+                  color="#ffffff"
+                  strokeWidth={2.4}
+                />
+              </Pressable>
             )}
           </View>
         </View>
       </View>
+
+      {/* 2. Underhanging Drawer Context Strip (Shown on Draft Hero state like OG T3 Code) */}
+      {isDraftHero && (
+        <View style={styles.contextStrip}>
+          <Pressable style={styles.trayPill}>
+            <Icon name="Folder" size={11} color="#818181" />
+            <Text style={styles.trayPillText}>Current checkout</Text>
+            <Icon name="ChevronDown" size={10} color="#71717a" />
+          </Pressable>
+
+          <Pressable style={styles.trayPill}>
+            <Icon name="GitBranch" size={11} color="#818181" />
+            <Text style={styles.trayPillText}>{activeProject?.branch || 'main'}</Text>
+            <Icon name="ChevronDown" size={10} color="#71717a" />
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  floatingWrapper: {
+    width: '100%',
+    maxWidth: 736,
+    alignSelf: 'center',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    paddingTop: spacing.xs,
-    backgroundColor: colors.background,
+    paddingBottom: spacing.md,
+    zIndex: 10,
+    position: 'relative',
   },
   composerCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
+    backgroundColor: '#111215',
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: 'rgba(255, 255, 255, 0.14)',
+    paddingTop: 12,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.75,
+    shadowRadius: 28,
+    elevation: 10,
+    zIndex: 10,
   },
   chipsBar: {
     flexDirection: 'row',
@@ -180,9 +245,9 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceHover,
+    backgroundColor: '#191b22',
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: '#262934',
     borderRadius: borderRadius.sm,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -197,67 +262,162 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   textInput: {
-    minHeight: 56,
+    minHeight: 50,
     maxHeight: 180,
-    color: colors.text,
-    fontSize: typography.sizes.base,
+    color: '#f5f5f5',
+    fontSize: 14.5,
     fontFamily: typography.fontFamily,
     lineHeight: 22,
     padding: 0,
     textAlignVertical: 'top',
-    // @ts-ignore
-    outlineWidth: 0,
   },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    marginTop: spacing.sm,
+    paddingTop: 8,
   },
   bottomLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  popoverBackdrop: {
+    position: 'absolute',
+    top: -3000,
+    left: -3000,
+    right: -3000,
+    bottom: -3000,
+    zIndex: 9998,
+  },
+  popoverAnchor: {
+    position: 'absolute',
+    bottom: 58,
+    left: 12,
+    zIndex: 9999,
   },
   modelPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceHover,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 6,
     gap: 6,
+    transition: 'background-color 0.15s ease' as any,
   },
-  providerDot: {
-    width: 7,
-    height: 7,
+  modelPillActive: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+  },
+  modelProvBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
     borderRadius: 4,
   },
+  modelProvBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    fontFamily: typography.monoFontFamily,
+  },
+  permissionsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    gap: 5,
+    transition: 'background-color 0.15s ease' as any,
+  },
+  pillHover: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
   modelNameText: {
-    color: colors.textSecondary,
-    fontSize: typography.sizes.xs,
+    color: '#d4d4d8',
+    fontSize: 12,
     fontFamily: typography.fontFamily,
     fontWeight: typography.weights.medium,
   },
-  quickAddBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: borderRadius.xs,
-    backgroundColor: colors.surfaceHover,
+  verticalDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#27272a',
+    marginHorizontal: 2,
   },
-  quickAddText: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontFamily: typography.monoFontFamily,
+  permissionsText: {
+    color: '#a1a1aa',
+    fontSize: 12,
+    fontFamily: typography.fontFamily,
   },
   bottomRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  attachBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    transition: 'background-color 0.15s ease' as any,
+  },
+  attachBtnHover: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  sendButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#346bf1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.64,
+  },
+  stopButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Underhanging Drawer Context Strip
+  contextStrip: {
+    alignSelf: 'center',
+    width: '92%',
+    marginTop: -14,
+    zIndex: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    paddingTop: 18,
+    paddingBottom: 5,
+    paddingHorizontal: 12,
+    backgroundColor: '#0c0d10',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+  },
+  trayPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#14151b',
+    borderWidth: 1,
+    borderColor: '#22242c',
+    gap: 5,
+  },
+  trayPillText: {
+    color: '#818181',
+    fontSize: 11,
+    fontFamily: typography.fontFamily,
   },
 });

@@ -139,7 +139,7 @@ export const DesktopHeader: React.FC = () => {
           icon="Settings"
           variant="ghost"
           size="sm"
-          onPress={openSettings}
+          onPress={() => openSettings()}
         />
 
         {/* Electron Window Controls */}
