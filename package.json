@@ -14,7 +14,8 @@
     "postinstall": "node scripts/ensure-electron.cjs",
     "server:build": "cd server && go build -o bin/t3server ./cmd/t3server",
     "server:run": "cd server && go run ./cmd/t3server",
-    "server:test": "cd server && go test -v ./..."
+    "server:test": "cd server && go test -v ./...",
+    "install:desktop": "pnpm build && pnpm server:build && node scripts/install-desktop.cjs"
   },
   "keywords": [
     "t3code",

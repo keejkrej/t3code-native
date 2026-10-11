@@ -1,13 +1,42 @@
-export type ProviderId = 'claude' | 'codex' | 'cursor' | 'grok' | 'opencode' | 'antigravity';
+export type ProviderId = 'claude' | 'codex' | 'cursor' | 'grok' | 'opencode' | 'antigravity' | string;
+
+export interface ModelInfo {
+  id: string;
+  name: string;
+  description: string;
+  isDefault?: boolean;
+  isLegacy?: boolean;
+  badge?: 'new' | 'reasoning' | 'thinking' | 'fast';
+  capabilities?: string[];
+  contextWindow?: string;
+  subProvider?: string;
+  isCustom?: boolean;
+}
+
+export interface ProviderEnvVar {
+  id: string;
+  name: string;
+  value: string;
+  sensitive: boolean;
+}
 
 export interface ProviderInfo {
-  id: ProviderId;
+  id: string;
   name: string;
+  displayName?: string;
   badge: string;
   iconColor: string;
-  models: { id: string; name: string; description: string; isDefault?: boolean }[];
+  driverKind: ProviderId;
+  version?: string;
   isConfigured: boolean;
+  isEnabled: boolean;
   authStatus: 'authenticated' | 'needs_login' | 'disabled';
+  authEmail?: string;
+  binaryPath?: string;
+  cliDetected?: boolean;
+  cliArguments?: string;
+  environmentVariables?: ProviderEnvVar[];
+  models: ModelInfo[];
 }
 
 export interface Project {
@@ -134,9 +163,20 @@ export interface ServerEnvironment {
 }
 
 export interface AppSettings {
-  theme: 'dark' | 'light' | 'midnight';
+  theme: 'dark' | 'light' | 'midnight' | 'system';
+  contrast: number;
+  glassOpacity: number;
   fontFamily: 'default' | 'jetbrains' | 'system';
   fontSize: number;
+  codeFontFamily: string;
+  codeFontSize: number;
+  interfaceFontSize: number;
+  terminalFontSize: number;
+  responseStreamingMode: 'streamed' | 'batched';
+  autoSettleAfterDays: number;
+  confirmThreadArchive: boolean;
+  confirmThreadDelete: boolean;
+  confirmQuit: boolean;
   serverUrl: string;
   authToken: string;
   autoConnect: boolean;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { colors, typography, borderRadius, spacing } from '../../theme';
+import { colors, typography, borderRadius } from '../../theme';
 import { Icon } from '../ui/Icon';
 
 interface ThinkingAccordionProps {
@@ -19,21 +19,24 @@ export const ThinkingAccordion: React.FC<ThinkingAccordionProps> = ({
   return (
     <View style={styles.container}>
       <Pressable
-        style={styles.header}
+        style={({ pressed }: any) => [styles.header, pressed && styles.headerHover]}
         onPress={() => setIsExpanded(!isExpanded)}
       >
         <View style={styles.headerLeft}>
-          <View style={[styles.pulseDot, isStreaming && styles.pulseDotActive]} />
-          <Icon name="Sparkles" size={13} color={colors.accentPurple} />
+          <Icon
+            name="Brain"
+            size={13}
+            color={isStreaming ? colors.primaryLight : '#818181'}
+          />
           <Text style={styles.title}>
             {isStreaming ? 'Thinking...' : 'Reasoning process'}
           </Text>
         </View>
+
         <View style={styles.headerRight}>
-          <Text style={styles.toggleHint}>{isExpanded ? 'Hide' : 'Show details'}</Text>
           <Icon
-            name={isExpanded ? 'ChevronUp' : 'ChevronDown'}
-            size={13}
+            name={isExpanded ? 'ChevronDown' : 'ChevronRight'}
+            size={12}
             color={colors.textMuted}
           />
         </View>
@@ -52,63 +55,46 @@ export const ThinkingAccordion: React.FC<ThinkingAccordionProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surfaceHover,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    marginVertical: 6,
-    overflow: 'hidden',
+    width: '100%',
+    marginVertical: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: borderRadius.sm,
+    backgroundColor: 'transparent',
+    transition: 'background-color 0.15s ease' as any,
+  },
+  headerHover: {
+    backgroundColor: '#131313',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.accentPurple,
-    opacity: 0.5,
-  },
-  pulseDotActive: {
-    opacity: 1,
-    backgroundColor: colors.primary,
-  },
   title: {
-    color: colors.textSecondary,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
+    color: '#818181',
+    fontSize: 13,
+    fontWeight: typography.weights.normal,
     fontFamily: typography.fontFamily,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  toggleHint: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontFamily: typography.fontFamily,
   },
   content: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
+    paddingLeft: 29,
+    paddingRight: 10,
+    paddingVertical: 6,
   },
   thoughtText: {
-    color: colors.textSecondary,
-    fontSize: typography.sizes.xs,
-    fontFamily: typography.monoFontFamily,
-    lineHeight: 18,
+    color: '#909095',
+    fontSize: 13,
+    fontFamily: typography.fontFamily,
+    lineHeight: 20,
   },
 });

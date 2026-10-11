@@ -10,8 +10,9 @@ import {
 import { colors, typography, borderRadius, spacing } from '../../theme';
 import { useAppStore } from '../../state/useAppStore';
 import { Icon } from '../ui/Icon';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
+import { T3Wordmark } from './T3Wordmark';
+import { SidebarStageBackdrop } from './SidebarStageBackdrop';
+import { getProjectMonogram, getProjectColor } from '../../utils/projectMonogram';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -22,12 +23,15 @@ export const Sidebar: React.FC = () => {
     setActiveProject,
     setActiveThread,
     openNewThreadModal,
+    openSettings,
     deleteThread,
+    toggleSidebar,
     providers,
   } = useAppStore();
 
   const [searchFilter, setSearchFilter] = useState('');
-  const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
+  const [isSettledExpanded, setIsSettledExpanded] = useState(false);
+  const [hoveredThreadId, setHoveredThreadId] = useState<string | null>(null);
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
@@ -38,213 +42,187 @@ export const Sidebar: React.FC = () => {
       t.title.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  const getProviderColor = (providerId: string) => {
-    switch (providerId) {
-      case 'claude':
-        return colors.claude;
-      case 'codex':
-        return colors.codex;
-      case 'cursor':
-        return colors.cursor;
-      case 'grok':
-        return colors.grok;
-      case 'opencode':
-        return colors.opencode;
-      case 'antigravity':
-        return colors.antigravity;
-      default:
-        return colors.textSecondary;
-    }
-  };
-
-  const getProviderBadge = (providerId: string) => {
-    const p = providers.find((prov) => prov.id === providerId);
-    return p?.badge || 'AI';
-  };
-
   return (
     <View style={styles.sidebar}>
-      {/* Active Project Selector */}
-      <View style={styles.projectSection}>
-        <Pressable
-          style={styles.projectCard}
-          onPress={() => setIsProjectsExpanded(!isProjectsExpanded)}
-        >
-          <View style={styles.projectLeft}>
-            <View style={styles.projectIconBadge}>
-              <Text style={styles.projectIconText}>{activeProject?.icon ?? '📂'}</Text>
-            </View>
-            <View style={styles.projectMeta}>
-              <Text style={styles.projectName} numberOfLines={1}>
-                {activeProject?.name ?? 'Select Project'}
-              </Text>
-              <Text style={styles.projectPath} numberOfLines={1}>
-                {activeProject?.path ?? ''}
-              </Text>
-            </View>
-          </View>
-          <Icon
-            name={isProjectsExpanded ? 'ChevronUp' : 'ChevronDown'}
-            size={14}
-            color={colors.textSecondary}
-          />
-        </Pressable>
-
-        {/* Project Switcher Dropdown */}
-        {isProjectsExpanded && (
-          <View style={styles.projectsDropdown}>
-            <Text style={styles.dropdownHeader}>RECENT WORKSPACES</Text>
-            {projects.map((proj) => (
-              <Pressable
-                key={proj.id}
-                style={[
-                  styles.dropdownProjectItem,
-                  proj.id === activeProjectId && styles.activeDropdownItem,
-                ]}
-                onPress={() => {
-                  setActiveProject(proj.id);
-                  setIsProjectsExpanded(false);
-                }}
-              >
-                <Text style={styles.dropdownIcon}>{proj.icon}</Text>
-                <View style={styles.dropdownProjectInfo}>
-                  <Text style={styles.dropdownProjectName}>{proj.name}</Text>
-                  <Text style={styles.dropdownProjectBranch}>{proj.branch}</Text>
-                </View>
-                {proj.id === activeProjectId && (
-                  <Icon name="Check" size={13} color={colors.primary} />
-                )}
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </View>
-
-      {/* Threads Section Header */}
-      <View style={styles.threadsHeader}>
-        <View style={styles.threadsHeaderLeft}>
-          <Text style={styles.sectionTitle}>CONVERSATIONS</Text>
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{currentThreads.length}</Text>
-          </View>
-        </View>
-        <Button
-          icon="Plus"
-          variant="ghost"
-          size="xs"
-          onPress={openNewThreadModal}
-        />
-      </View>
-
-      {/* Search Threads */}
-      <View style={styles.searchContainer}>
-        <Icon name="Search" size={12} color={colors.textMuted} />
-        <TextInput
-          placeholder="Filter threads..."
-          placeholderTextColor={colors.textMuted}
-          value={searchFilter}
-          onChangeText={setSearchFilter}
-          style={styles.searchInput}
-        />
-        {searchFilter.length > 0 && (
-          <Pressable onPress={() => setSearchFilter('')}>
-            <Icon name="X" size={12} color={colors.textMuted} />
+      {/* 1. Blueprint Grid Stage Header */}
+      <View style={styles.stageHeader}>
+        <SidebarStageBackdrop />
+        <View style={styles.stageContent}>
+          <Pressable
+            style={styles.toggleButton}
+            onPress={toggleSidebar}
+            title="Toggle Sidebar"
+          >
+            <Icon name="Sidebar" size={16} color="rgba(255, 255, 255, 0.85)" />
           </Pressable>
-        )}
+
+          <Pressable
+            style={styles.brandRow}
+            onPress={() => {
+              if (currentThreads[0]) setActiveThread(currentThreads[0].id);
+            }}
+          >
+            <T3Wordmark size={18} color="#ffffff" />
+            <Text style={styles.brandCodeText}>Code</Text>
+          </Pressable>
+        </View>
       </View>
 
-      {/* Threads List */}
+      {/* 2. Search & Action Toolbar */}
+      <View style={styles.toolbarRow}>
+        <View style={styles.searchBox}>
+          <Icon name="Search" size={13} color={colors.textMuted} />
+          <TextInput
+            placeholder="Search"
+            placeholderTextColor={colors.textMuted}
+            value={searchFilter}
+            onChangeText={setSearchFilter}
+            style={styles.searchInput}
+          />
+          <Text style={styles.slashHint}>/</Text>
+        </View>
+
+        <View style={styles.toolbarActions}>
+          <Pressable style={styles.toolbarBtn} title="Filter threads by project">
+            <Icon name="ListFilter" size={14} color={colors.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={styles.toolbarBtn}
+            onPress={openNewThreadModal}
+            title="Add project"
+          >
+            <Icon name="FolderPlus" size={14} color={colors.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={styles.toolbarBtn}
+            onPress={openNewThreadModal}
+            title="New thread"
+          >
+            <Icon name="SquarePen" size={14} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* 3. Threads List */}
       <ScrollView style={styles.threadsList} showsVerticalScrollIndicator={false}>
         {currentThreads.map((thread) => {
           const isActive = thread.id === activeThreadId;
-          const providerColor = getProviderColor(thread.provider);
-          const badgeText = getProviderBadge(thread.provider);
+          const isHovered = hoveredThreadId === thread.id;
+          const proj = projects.find((p) => p.id === thread.projectId) || activeProject;
+          const projName = proj ? proj.name : 'server';
+          const monogram = getProjectMonogram(projName);
+          const pColor = getProjectColor(projName);
 
           return (
             <Pressable
               key={thread.id}
-              style={[styles.threadItem, isActive && styles.activeThreadItem]}
+              style={[
+                styles.threadCard,
+                isActive && styles.activeThreadCard,
+                isHovered && !isActive && styles.hoverThreadCard,
+              ]}
               onPress={() => setActiveThread(thread.id)}
+              // @ts-ignore
+              onMouseEnter={() => setHoveredThreadId(thread.id)}
+              onMouseLeave={() => setHoveredThreadId(null)}
             >
-              <View style={styles.threadItemContent}>
-                {/* Header row: Provider badge & time */}
-                <View style={styles.threadTopRow}>
-                  <View style={styles.providerBadgeContainer}>
-                    <View
-                      style={[
-                        styles.providerTag,
-                        { backgroundColor: `${providerColor}20`, borderColor: `${providerColor}40` },
-                      ]}
-                    >
-                      <Text style={[styles.providerTagText, { color: providerColor }]}>
-                        {badgeText}
-                      </Text>
-                    </View>
-                    <Text style={styles.modelName} numberOfLines={1}>
-                      {thread.model}
+              {/* Top Row: Monogram + Project Name + Time */}
+              <View style={styles.threadTopRow}>
+                <View style={styles.projectMonogramGroup}>
+                  <View
+                    style={[
+                      styles.monogramBadge,
+                      { backgroundColor: pColor.bg, borderColor: pColor.border },
+                    ]}
+                  >
+                    <Text style={[styles.monogramText, { color: pColor.text }]}>
+                      {monogram}
                     </Text>
                   </View>
-                  <Text style={styles.threadTime}>{thread.updatedAt}</Text>
+                  <Text style={styles.projectLabel} numberOfLines={1}>
+                    {projName}
+                  </Text>
                 </View>
+                <Text style={styles.timeLabel}>{thread.updatedAt || 'now'}</Text>
+              </View>
 
-                {/* Title */}
+              {/* Bottom Row: Title + AI/Status Icon or Settle button on hover */}
+              <View style={styles.threadBottomRow}>
                 <Text
                   style={[styles.threadTitle, isActive && styles.activeThreadTitle]}
-                  numberOfLines={2}
+                  numberOfLines={1}
                 >
                   {thread.title}
                 </Text>
 
-                {/* Footer: Branch & Status */}
-                <View style={styles.threadBottomRow}>
-                  <View style={styles.threadBranch}>
-                    <Icon name="GitBranch" size={10} color={colors.textMuted} />
-                    <Text style={styles.threadBranchText}>{thread.branch}</Text>
-                  </View>
-                  {thread.status === 'running' && (
-                    <Badge label="Running" variant="warning" size="sm" />
+                <View style={styles.trailingAction}>
+                  {isActive && isHovered ? (
+                    <Pressable
+                      style={styles.settleButton}
+                      onPress={(e: any) => {
+                        e.stopPropagation?.();
+                        deleteThread(thread.id);
+                      }}
+                      title="Settle thread"
+                    >
+                      <Text style={styles.settleText}>Settle</Text>
+                    </Pressable>
+                  ) : (
+                    <Icon name="Sparkles" size={13} color={colors.textMuted} />
                   )}
                 </View>
               </View>
-
-              {/* Delete action on hover / right button */}
-              {isActive && (
-                <Pressable
-                  style={styles.deleteThreadBtn}
-                  onPress={() => deleteThread(thread.id)}
-                >
-                  <Icon name="Trash2" size={12} color={colors.textMuted} />
-                </Pressable>
-              )}
             </Pressable>
           );
         })}
 
         {currentThreads.length === 0 && (
-          <View style={styles.emptyThreads}>
-            <Text style={styles.emptyThreadsText}>No threads found</Text>
-            <Button
-              label="New Thread"
-              icon="Plus"
-              variant="outline"
-              size="sm"
-              onPress={openNewThreadModal}
-              style={{ marginTop: 8 }}
-            />
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No threads yet</Text>
+            <Pressable style={styles.emptyNewBtn} onPress={openNewThreadModal}>
+              <Icon name="SquarePen" size={13} color={colors.primaryLight} />
+              <Text style={styles.emptyNewText}>Start a new thread</Text>
+            </Pressable>
           </View>
         )}
       </ScrollView>
 
-      {/* Bottom Sidebar Action Bar */}
-      <View style={styles.sidebarFooter}>
-        <Button
-          label="New Thread"
-          icon="Plus"
-          variant="primary"
-          size="sm"
-          onPress={openNewThreadModal}
-          style={{ flex: 1 }}
+      {/* 4. Settled (0) Section */}
+      <Pressable
+        style={styles.settledHeader}
+        onPress={() => setIsSettledExpanded(!isSettledExpanded)}
+      >
+        <Text style={styles.settledTitle}>Settled (0)</Text>
+        <Icon
+          name={isSettledExpanded ? 'ChevronDown' : 'ChevronRight'}
+          size={12}
+          color={colors.textMuted}
         />
+      </Pressable>
+
+      {/* 5. Sidebar Bottom Utility Footer */}
+      <View style={styles.footer}>
+        <Pressable
+          style={styles.footerIconBtn}
+          onPress={() => openSettings()}
+          title="Settings"
+        >
+          <Icon name="Settings" size={16} color={colors.textMuted} />
+        </Pressable>
+
+        <Pressable
+          style={styles.footerIconBtn}
+          title="Pull Requests"
+        >
+          <Icon name="GitPullRequest" size={16} color={colors.textMuted} />
+        </Pressable>
+
+        <Pressable
+          style={styles.footerIconBtn}
+          title="Usage"
+        >
+          <Icon name="BarChart3" size={16} color={colors.textMuted} />
+        </Pressable>
       </View>
     </View>
   );
@@ -252,261 +230,232 @@ export const Sidebar: React.FC = () => {
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 280,
-    backgroundColor: colors.sidebar,
+    width: 260,
+    height: '100%',
+    backgroundColor: '#000000',
     borderRightWidth: 1,
     borderRightColor: colors.sidebarBorder,
     flexDirection: 'column',
-    height: '100%',
-  },
-  projectSection: {
-    padding: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.sidebarBorder,
-    position: 'relative',
     zIndex: 20,
   },
-  projectCard: {
+  stageHeader: {
+    height: 52,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  stageContent: {
+    position: 'relative',
+    zIndex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.sidebarRowHover,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.sidebarBorder,
+    height: '100%',
+    paddingHorizontal: spacing.sm,
+    gap: 8,
   },
-  projectLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  projectIconBadge: {
+  toggleButton: {
     width: 28,
     height: 28,
     borderRadius: borderRadius.sm,
-    backgroundColor: colors.surfaceActive,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
-  projectIconText: {
-    fontSize: 14,
-  },
-  projectMeta: {
-    flex: 1,
-  },
-  projectName: {
-    color: colors.text,
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    fontFamily: typography.fontFamily,
-  },
-  projectPath: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontFamily: typography.monoFontFamily,
-  },
-  projectsDropdown: {
-    position: 'absolute',
-    top: 56,
-    left: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: colors.surfaceHover,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderHighlight,
-    padding: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 100,
-  },
-  dropdownHeader: {
-    color: colors.textMuted,
-    fontSize: 9,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  dropdownProjectItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: borderRadius.sm,
-  },
-  activeDropdownItem: {
-    backgroundColor: colors.surfaceActive,
-  },
-  dropdownIcon: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-  dropdownProjectInfo: {
-    flex: 1,
-  },
-  dropdownProjectName: {
-    color: colors.text,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-  },
-  dropdownProjectBranch: {
-    color: colors.textSecondary,
-    fontSize: 10,
-    fontFamily: typography.monoFontFamily,
-  },
-  threadsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: 4,
-  },
-  threadsHeaderLeft: {
+  brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  sectionTitle: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.5,
+  brandCodeText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontWeight: typography.weights.medium,
     fontFamily: typography.fontFamily,
   },
-  countBadge: {
-    backgroundColor: colors.surfaceHover,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: borderRadius.xs,
-  },
-  countBadgeText: {
-    color: colors.textSecondary,
-    fontSize: 10,
-    fontWeight: typography.weights.semibold,
-  },
-  searchContainer: {
+  toolbarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceHover,
-    marginHorizontal: spacing.sm,
-    marginVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: borderRadius.sm,
-    height: 28,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+    gap: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 8,
+    height: 30,
   },
   searchInput: {
     flex: 1,
     color: colors.text,
-    fontSize: typography.sizes.xs,
+    fontSize: 12,
     fontFamily: typography.fontFamily,
     marginLeft: 6,
     padding: 0,
-    // @ts-ignore
-    outlineWidth: 0,
+  },
+  slashHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontFamily: typography.monoFontFamily,
+  },
+  toolbarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  toolbarBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   threadsList: {
     flex: 1,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
-  threadItem: {
-    flexDirection: 'row',
-    padding: 10,
+  threadCard: {
     borderRadius: borderRadius.md,
+    padding: 10,
     marginVertical: 2,
     backgroundColor: 'transparent',
-    alignItems: 'center',
-  },
-  activeThreadItem: {
-    backgroundColor: colors.sidebarRowActive,
     borderWidth: 1,
-    borderColor: colors.sidebarBorder,
+    borderColor: 'transparent',
+    gap: 4,
   },
-  threadItemContent: {
-    flex: 1,
+  hoverThreadCard: {
+    backgroundColor: '#121317',
+  },
+  activeThreadCard: {
+    backgroundColor: '#18191f',
+    borderColor: '#262832',
   },
   threadTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'space-between',
   },
-  providerBadgeContainer: {
+  projectMonogramGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
-  providerTag: {
+  monogramBadge: {
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: borderRadius.xs,
     borderWidth: 1,
   },
-  providerTagText: {
+  monogramText: {
     fontSize: 9,
     fontWeight: typography.weights.bold,
     fontFamily: typography.monoFontFamily,
   },
-  modelName: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontFamily: typography.monoFontFamily,
-    maxWidth: 120,
-  },
-  threadTime: {
-    color: colors.textMuted,
-    fontSize: 10,
-  },
-  threadTitle: {
+  projectLabel: {
     color: colors.textSecondary,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.normal,
-    lineHeight: 18,
-    marginBottom: 6,
-  },
-  activeThreadTitle: {
-    color: colors.text,
+    fontSize: 11,
     fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily,
+  },
+  timeLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontFamily: typography.fontFamily,
   },
   threadBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 2,
   },
-  threadBranch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  threadTitle: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: typography.weights.normal,
+    fontFamily: typography.fontFamily,
+    flex: 1,
+    marginRight: 6,
   },
-  threadBranchText: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontFamily: typography.monoFontFamily,
+  activeThreadTitle: {
+    color: colors.text,
+    fontWeight: typography.weights.medium,
   },
-  deleteThreadBtn: {
-    padding: 6,
-    borderRadius: borderRadius.xs,
-    marginLeft: 4,
-  },
-  emptyThreads: {
+  trailingAction: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  settleButton: {
+    backgroundColor: '#262832',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.xs,
+  },
+  settleText: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: typography.weights.medium,
+  },
+  emptyContainer: {
     paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  emptyThreadsText: {
+  emptyText: {
     color: colors.textMuted,
-    fontSize: typography.sizes.sm,
+    fontSize: 12,
   },
-  sidebarFooter: {
-    padding: spacing.sm,
+  emptyNewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surfaceHover,
+  },
+  emptyNewText: {
+    color: colors.primaryLight,
+    fontSize: 12,
+    fontWeight: typography.weights.medium,
+  },
+  settledHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+  },
+  settledTitle: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontFamily: typography.fontFamily,
+  },
+  footer: {
+    height: 48,
     borderTopWidth: 1,
     borderTopColor: colors.sidebarBorder,
-    backgroundColor: colors.sidebar,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    gap: 12,
+    backgroundColor: '#000000',
+  },
+  footerIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

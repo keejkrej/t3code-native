@@ -4,6 +4,7 @@ import { colors, typography, borderRadius, spacing } from '../../theme';
 import { useAppStore } from '../../state/useAppStore';
 import { Icon } from '../ui/Icon';
 import { Badge } from '../ui/Badge';
+import { ProviderLogo } from '../ui/ProviderLogo';
 
 export const ModelPickerModal: React.FC = () => {
   const {
@@ -44,15 +45,8 @@ export const ModelPickerModal: React.FC = () => {
               return (
                 <View key={prov.id} style={styles.providerSection}>
                   <View style={styles.providerHeader}>
-                    <View
-                      style={[
-                        styles.providerBadge,
-                        { backgroundColor: `${prov.iconColor}25` },
-                      ]}
-                    >
-                      <Text style={[styles.providerBadgeText, { color: prov.iconColor }]}>
-                        {prov.badge}
-                      </Text>
+                    <View style={styles.providerBadge}>
+                      <ProviderLogo provider={(prov as any).driverKind || prov.id} size={16} />
                     </View>
                     <Text style={styles.providerName}>{prov.name}</Text>
                     {prov.authStatus === 'authenticated' ? (
