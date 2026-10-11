@@ -31,11 +31,11 @@ console.log('--> Copying React Native Linux engine & bundles...');
 const rnlBinSrc = '/home/jack/workspace/react-native-linux/build/release/bin/rnl_window';
 const hermescSrc = '/home/jack/workspace/react-native-linux/build/release/bin/hermesc';
 if (fs.existsSync(rnlBinSrc)) {
-  fs.copyFileSync(rnlBinSrc, path.join(INSTALL_DIR, 'bin/rnl_window'));
+  execSync(`cp --remove-destination "${rnlBinSrc}" "${path.join(INSTALL_DIR, 'bin/rnl_window')}"`);
   fs.chmodSync(path.join(INSTALL_DIR, 'bin/rnl_window'), 0o755);
 }
 if (fs.existsSync(hermescSrc)) {
-  fs.copyFileSync(hermescSrc, path.join(INSTALL_DIR, 'bin/hermesc'));
+  execSync(`cp --remove-destination "${hermescSrc}" "${path.join(INSTALL_DIR, 'bin/hermesc')}"`);
   fs.chmodSync(path.join(INSTALL_DIR, 'bin/hermesc'), 0o755);
 }
 
@@ -48,7 +48,7 @@ if (!fs.existsSync(serverBinSrc)) {
   console.log('--> Building server binary first...');
   execSync('go build -o bin/t3server ./cmd/t3server', { cwd: path.join(REPO_ROOT, 'server'), stdio: 'inherit' });
 }
-execSync(`cp "${serverBinSrc}" "${path.join(INSTALL_DIR, 'server/bin/t3server')}"`);
+execSync(`cp --remove-destination "${serverBinSrc}" "${path.join(INSTALL_DIR, 'server/bin/t3server')}"`);
 fs.chmodSync(path.join(INSTALL_DIR, 'server/bin/t3server'), 0o755);
 
 // 4. Install launcher script in ~/.local/bin/t3code-native
