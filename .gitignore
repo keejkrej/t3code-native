@@ -7,6 +7,10 @@ dist/
 dist-electron/
 out/
 build/
+server/bin/
+
+# Upstream reference clone
+t3code-upstream/
 
 # Logs and runtime caches
 *.log

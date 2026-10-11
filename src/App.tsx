@@ -14,6 +14,7 @@ import { ModelPickerModal } from './components/composer/ModelPickerModal';
 
 export const App: React.FC = () => {
   const {
+    initClient,
     isSidebarOpen,
     isInspectorOpen,
     openCommandPalette,
@@ -22,6 +23,11 @@ export const App: React.FC = () => {
     toggleSidebar,
     toggleInspector,
   } = useAppStore();
+
+  // Initialize connection to Go server daemon
+  useEffect(() => {
+    initClient();
+  }, [initClient]);
 
   // Desktop global keyboard shortcuts
   useEffect(() => {
@@ -98,7 +104,7 @@ const styles = StyleSheet.create({
   centerStage: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: colors.background,
+    height: '100%',
     overflow: 'hidden',
   },
 });
